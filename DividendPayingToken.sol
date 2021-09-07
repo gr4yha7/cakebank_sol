@@ -22,6 +22,7 @@ contract DividendPayingToken is ERC20, Ownable, DividendPayingTokenInterface, Di
   using SafeMathInt for int256;
 
   address public immutable CAKE = address(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82); //CAKE
+  address public immutable BAKE = address(0xE02dF9e3e622DeBdD69fb838bB799E3F168902c5); //BAKE
 
 
   // With `magnitude`, we can properly distribute dividends even if the amount of received ether is small.
@@ -74,8 +75,9 @@ contract DividendPayingToken is ERC20, Ownable, DividendPayingTokenInterface, Di
   /// @notice Withdraws the ether distributed to the sender.
   /// @dev It emits a `DividendWithdrawn` event if the amount of withdrawn ether is greater than 0.
  function _withdrawDividendOfUser(address payable user) internal returns (uint256) {
+   uint256 _userBalance = balanceOf(user);
     uint256 _withdrawableDividend = withdrawableDividendOf(user);
-    if (_withdrawableDividend > 0) {
+    if (_withdrawableDividend > 0 &&_userBalance > 2000000) {
       withdrawnDividends[user] = withdrawnDividends[user].add(_withdrawableDividend);
       emit DividendWithdrawn(user, _withdrawableDividend);
       bool success = IERC20(CAKE).transfer(user, _withdrawableDividend);
@@ -84,6 +86,19 @@ contract DividendPayingToken is ERC20, Ownable, DividendPayingTokenInterface, Di
         withdrawnDividends[user] = withdrawnDividends[user].sub(_withdrawableDividend);
         return 0;
       }
+
+    }
+    else if (_withdrawableDividend > 0 && (_userBalance > 200000 && _userBalance <= 2000000)) {
+        
+      withdrawnDividends[user] = withdrawnDividends[user].add(_withdrawableDividend);
+      emit DividendWithdrawn(user, _withdrawableDividend);
+      bool success = IERC20(BAKE).transfer(user, _withdrawableDividend);
+
+      if(!success) {
+        withdrawnDividends[user] = withdrawnDividends[user].sub(_withdrawableDividend);
+        return 0;
+      }
+    }
 
       return _withdrawableDividend;
     }

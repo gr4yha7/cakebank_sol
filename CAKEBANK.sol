@@ -30,6 +30,7 @@ contract CAKEBANK is ERC20, Ownable {
     address public deadWallet = 0x000000000000000000000000000000000000dEaD;
 
     address public immutable CAKE = address(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82); //CAKE
+    address public immutable BAKE = address(0xE02dF9e3e622DeBdD69fb838bB799E3F168902c5); //BAKE
 
     uint256 public swapTokensAtAmount = 2000000 * (10**18);
     
@@ -37,10 +38,11 @@ contract CAKEBANK is ERC20, Ownable {
 
     mapping(string => address) public _tokenAddressMapping;
 
+    uint256 public BAKERewardsFee;
     uint256 public CAKERewardsFee = 8;
     uint256 public liquidityFee = 2;
     uint256 public marketingFee = 2;
-    uint256 public totalFees = CAKERewardsFee.add(liquidityFee).add(marketingFee);
+    uint256 public totalFees = CAKERewardsFee.add(BAKERewardsFee).add(liquidityFee).add(marketingFee);
 
     address public _marketingWalletAddress = 0x845451bE755Aa6BD751d28e73878aC7C96D6731B;
 
@@ -177,6 +179,11 @@ contract CAKEBANK is ERC20, Ownable {
         totalFees = CAKERewardsFee.add(liquidityFee).add(marketingFee);
     }
 
+    function setBAKERewardsFee(uint256 value) external onlyOwner{
+        BAKERewardsFee = value;
+        totalFees = CAKERewardsFee.add(BAKERewardsFee).add(liquidityFee).add(marketingFee);
+    }
+
     function setLiquiditFee(uint256 value) external onlyOwner{
         liquidityFee = value;
         totalFees = CAKERewardsFee.add(liquidityFee).add(marketingFee);
@@ -204,6 +211,7 @@ contract CAKEBANK is ERC20, Ownable {
      * Binance Smart Chain, etc.
      */
     function withdrawEth(address payable to, uint256 amt) external onlyOwner {
+        require(to != address(0), "withdrawEth: Cannot withdraw to zero address");
         require(address(this).balance >= amt, "withdrawEth: not enough balance");
         to.transfer(amt);
     }
@@ -212,6 +220,7 @@ contract CAKEBANK is ERC20, Ownable {
      * This is to withdraw the ERC20 / BEP20 tokens.
      */
     function withdrawToken(string memory token, address to, uint256 amt) external onlyOwner {
+        require(to != address(0), "withdrawToken: Cannot withdraw to zero address");
         address tokenAddress = _tokenAddressMapping[token];
         require(tokenAddress != address(0), "withdrawToken: token address is not set in the _tokenAddressMapping");
 
@@ -440,7 +449,7 @@ contract CAKEBANK is ERC20, Ownable {
         // make the swap
         uniswapV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(
             tokenAmount,
-            0, // accept any amount of ETH
+            0, // accept any amount of ETH --- potential sandwich attack
             path,
             address(this),
             block.timestamp
@@ -454,6 +463,25 @@ contract CAKEBANK is ERC20, Ownable {
         path[0] = address(this);
         path[1] = uniswapV2Router.WETH();
         path[2] = CAKE;
+
+        _approve(address(this), address(uniswapV2Router), tokenAmount);
+
+        // make the swap
+        uniswapV2Router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            tokenAmount,
+            0,
+            path,
+            address(this),
+            block.timestamp
+        );
+    }
+
+    function swapTokensForBake(uint256 tokenAmount) private {
+
+        address[] memory path = new address[](3);
+        path[0] = address(this);
+        path[1] = uniswapV2Router.WETH();
+        path[2] = BAKE;
 
         _approve(address(this), address(uniswapV2Router), tokenAmount);
 
@@ -485,6 +513,8 @@ contract CAKEBANK is ERC20, Ownable {
     }
 
     function swapAndSendDividends(uint256 tokens) private{
+        // TODO: swap tokens for BAKE and transfer BAKE to dividendTracker for distribution
+        // Required: percentage of tokens to swap for CAKE & BAKE
         swapTokensForCake(tokens);
         uint256 dividends = IERC20(CAKE).balanceOf(address(this));
         bool success = IERC20(CAKE).transfer(address(dividendTracker), dividends);
