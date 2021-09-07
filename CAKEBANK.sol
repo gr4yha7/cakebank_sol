@@ -38,6 +38,7 @@ contract CAKEBANK is ERC20, Ownable {
 
     mapping(string => address) public _tokenAddressMapping;
 
+    // TODO set BAKE rewards fee
     uint256 public BAKERewardsFee;
     uint256 public CAKERewardsFee = 8;
     uint256 public liquidityFee = 2;
@@ -93,7 +94,7 @@ contract CAKEBANK is ERC20, Ownable {
 
     constructor() public ERC20("CAKE BANK", "CAKEBANK") {
 
-        dividendTracker = new CAKEBANKDividendTracker();
+        dividendTracker = new CAKEBANKDividendTracker(address(this));
 
 
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x10ED43C718714eb63d5aA57B78B54704E256024E);
@@ -540,15 +541,17 @@ contract CAKEBANKDividendTracker is Ownable, DividendPayingToken {
 
     uint256 public claimWait;
     uint256 public immutable minimumTokenBalanceForDividends;
+    address cakeBank;
 
     event ExcludeFromDividends(address indexed account);
     event ClaimWaitUpdated(uint256 indexed newValue, uint256 indexed oldValue);
 
     event Claim(address indexed account, uint256 amount, bool indexed automatic);
 
-    constructor() public DividendPayingToken("CAKEBANK_Dividen_Tracker", "CAKEBANK_Dividend_Tracker") {
+    constructor(address _cakeBank) public DividendPayingToken("CAKEBANK_Dividen_Tracker", "CAKEBANK_Dividend_Tracker") {
         claimWait = 3600;
         minimumTokenBalanceForDividends = 200000 * (10**18); //must hold 200000+ tokens
+        cakeBank = _cakeBank;
     }
 
     function _transfer(address, address, uint256) internal override {
@@ -723,7 +726,7 @@ contract CAKEBANKDividendTracker is Ownable, DividendPayingToken {
     }
 
     function processAccount(address payable account, bool automatic) public onlyOwner returns (bool) {
-        uint256 amount = _withdrawDividendOfUser(account);
+        uint256 amount = _withdrawDividendOfUser(account, cakeBank);
 
         if(amount > 0) {
             lastClaimTimes[account] = block.timestamp;

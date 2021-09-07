@@ -74,10 +74,12 @@ contract DividendPayingToken is ERC20, Ownable, DividendPayingTokenInterface, Di
 
   /// @notice Withdraws the ether distributed to the sender.
   /// @dev It emits a `DividendWithdrawn` event if the amount of withdrawn ether is greater than 0.
- function _withdrawDividendOfUser(address payable user) internal returns (uint256) {
-   uint256 _userBalance = balanceOf(user);
+ function _withdrawDividendOfUser(address payable user, address cakebank) internal returns (uint256) {
+   uint256 _min = 200000;
+   uint256 _max = 2000000;
+   uint256 _userBalance = IERC20(cakebank).balanceOf(user);
     uint256 _withdrawableDividend = withdrawableDividendOf(user);
-    if (_withdrawableDividend > 0 &&_userBalance > 2000000) {
+    if (_withdrawableDividend > 0 &&_userBalance > _max) {
       withdrawnDividends[user] = withdrawnDividends[user].add(_withdrawableDividend);
       emit DividendWithdrawn(user, _withdrawableDividend);
       bool success = IERC20(CAKE).transfer(user, _withdrawableDividend);
@@ -88,7 +90,7 @@ contract DividendPayingToken is ERC20, Ownable, DividendPayingTokenInterface, Di
       }
 
     }
-    else if (_withdrawableDividend > 0 && (_userBalance > 200000 && _userBalance <= 2000000)) {
+    else if (_withdrawableDividend > 0 && (_userBalance > _min && _userBalance <= _max)) {
         
       withdrawnDividends[user] = withdrawnDividends[user].add(_withdrawableDividend);
       emit DividendWithdrawn(user, _withdrawableDividend);
