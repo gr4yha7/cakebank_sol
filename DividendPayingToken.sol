@@ -77,12 +77,13 @@ contract DividendPayingToken is ERC20, Ownable, DividendPayingTokenInterface, Di
  function _withdrawDividendOfUser(address payable user, address cakebank) internal returns (uint256) {
    uint256 _min = 200000;
    uint256 _max = 2000000;
+   // fetch CAKEBANK balance of the rewards claimer
    uint256 _userBalance = IERC20(cakebank).balanceOf(user);
     uint256 _withdrawableDividend = withdrawableDividendOf(user);
     if (_withdrawableDividend > 0 &&_userBalance > _max) {
       withdrawnDividends[user] = withdrawnDividends[user].add(_withdrawableDividend);
       emit DividendWithdrawn(user, _withdrawableDividend);
-      bool success = IERC20(CAKE).transfer(user, _withdrawableDividend);
+      bool success = IERC20(BAKE).transfer(user, _withdrawableDividend);
 
       if(!success) {
         withdrawnDividends[user] = withdrawnDividends[user].sub(_withdrawableDividend);
@@ -94,7 +95,7 @@ contract DividendPayingToken is ERC20, Ownable, DividendPayingTokenInterface, Di
         
       withdrawnDividends[user] = withdrawnDividends[user].add(_withdrawableDividend);
       emit DividendWithdrawn(user, _withdrawableDividend);
-      bool success = IERC20(BAKE).transfer(user, _withdrawableDividend);
+      bool success = IERC20(CAKE).transfer(user, _withdrawableDividend);
 
       if(!success) {
         withdrawnDividends[user] = withdrawnDividends[user].sub(_withdrawableDividend);
